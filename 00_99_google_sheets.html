@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบเลือกตัวเลข 00-99 (Google Sheets Sync)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Prompt -->
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- JS Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        body {
+            font-family: 'Prompt', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .num-card {
+            transition: all 0.2s ease-in-out;
+        }
+        .num-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-800 pb-12">
+
+    <!-- Header / Navbar -->
+    <header class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="bg-white/20 p-2.5 rounded-xl backdrop-blur-md">
+                    <i class="fa-solid fa-table-cells text-2xl text-amber-300"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl sm:text-2xl font-bold leading-tight">ระบบกระดานตัวเลข 00 - 99</h1>
+                    <p class="text-xs text-indigo-100">จองตัวเลข และ ตรวจรางวัล 1,000 บาท</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="openConfigModal()" class="flex items-center space-x-2 bg-white/10 hover:bg-white/20 active:bg-white/30 text-white text-sm px-3.5 py-2 rounded-xl border border-white/20 transition backdrop-blur-md">
+                    <i class="fa-solid fa-plug text-emerald-400"></i>
+                    <span>ตั้งค่า Google Sheet</span>
+                    <span id="statusBadge" class="inline-block w-2.5 h-2.5 rounded-full bg-slate-400 ml-1" title="สถานะการเชื่อมต่อ"></span>
+                </button>
+                <button onclick="openGasGuideModal()" class="flex items-center space-x-1.5 bg-amber-500 hover:bg-amber-600 text-white text-sm px-3.5 py-2 rounded-xl shadow transition font-medium">
+                    <i class="fa-solid fa-code"></i>
+                    <span class="hidden sm:inline">โค้ด Apps Script</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 mt-6">
+
+        <!-- Winners & Prize Section -->
+        <section class="mb-6 bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6">
+            <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+                <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                    <i class="fa-solid fa-trophy text-amber-500 text-xl"></i>
+                    <span>ออกรางวัลประจำงวด (รางวัลละ 1,000 บาท)</span>
+                </h2>
+                <div class="flex items-center gap-2 text-xs font-medium text-slate-500">
+                    <button onclick="syncDataFromSheet()" class="text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg transition flex items-center gap-1">
+                        <i class="fa-solid fa-rotate" id="syncIcon"></i> ซิงค์ข้อมูลล่าสุด
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Prize 1 -->
+                <div class="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-4 flex flex-col justify-between relative overflow-hidden">
+                    <div class="absolute -right-4 -bottom-4 opacity-10 text-amber-600 pointer-events-none">
+                        <i class="fa-solid fa-award text-9xl"></i>
+                    </div>
+                    <div>
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-sm font-semibold text-amber-800 flex items-center gap-1.5">
+                                <i class="fa-solid fa-crown text-amber-500"></i> รางวัลที่ 1
+                            </span>
+                            <span class="text-xs font-bold bg-amber-200/80 text-amber-900 px-2.5 py-0.5 rounded-full">1,000 บาท</span>
+                        </div>
+                        <div class="flex gap-2 mb-3">
+                            <input type="text" id="prize1Input" placeholder="ระบุเลข (00-99)" maxlength="2" 
+                                class="w-full text-center font-mono font-bold text-lg px-3 py-2 border border-amber-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white">
+                            <button onclick="setPrize(1)" class="bg-amber-500 hover:bg-amber-600 text-white font-medium px-4 py-2 rounded-lg transition text-sm flex-shrink-0">
+                                บันทึก
+                            </button>
+                        </div>
+                    </div>
+                    <div id="prize1WinnerBox" class="mt-2 pt-3 border-t border-amber-200/60 min-h-[50px]">
+                        <span class="text-xs text-slate-400">ยังไม่มีการระบุเลขรางวัล</span>
+                    </div>
+                </div>
+
+                <!-- Prize 2 -->
+                <div class="bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 rounded-xl p-4 flex flex-col justify-between relative overflow-hidden">
+                    <div class="absolute -right-4 -bottom-4 opacity-10 text-purple-600 pointer-events-none">
+                        <i class="fa-solid fa-award text-9xl"></i>
+                    </div>
+                    <div>
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-sm font-semibold text-purple-800 flex items-center gap-1.5">
+                                <i class="fa-solid fa-star text-purple-500"></i> รางวัลที่ 2
+                            </span>
+                            <span class="text-xs font-bold bg-purple-200/80 text-purple-900 px-2.5 py-0.5 rounded-full">1,000 บาท</span>
+                        </div>
+                        <div class="flex gap-2 mb-3">
+                            <input type="text" id="prize2Input" placeholder="ระบุเลข (00-99)" maxlength="2" 
+                                class="w-full text-center font-mono font-bold text-lg px-3 py-2 border border-purple-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white">
+                            <button onclick="setPrize(2)" class="bg-purple-600 hover:bg-purple-700 text-white font-medium px-4 py-2 rounded-lg transition text-sm flex-shrink-0">
+                                บันทึก
+                            </button>
+                        </div>
+                    </div>
+                    <div id="prize2WinnerBox" class="mt-2 pt-3 border-t border-purple-200/60 min-h-[50px]">
+                        <span class="text-xs text-slate-400">ยังไม่มีการระบุเลขรางวัล</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Stats & Actions Bar -->
+        <div class="flex flex-wrap justify-between items-center gap-3 mb-4 bg-white p-3 sm:p-4 rounded-xl border border-slate-200 shadow-sm">
+            <div class="flex items-center gap-4 text-sm">
+                <div class="flex items-center gap-1.5">
+                    <span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span>
+                    <span class="text-slate-600">จองแล้ว: <strong id="selectedCount" class="text-emerald-600 font-bold">0</strong>/100</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <span class="w-3 h-3 rounded-full bg-slate-200 border border-slate-300 inline-block"></span>
+                    <span class="text-slate-600">ว่าง: <strong id="remainingCount" class="text-slate-800 font-bold">100</strong></span>
+                </div>
+            </div>
+            
+            <button onclick="confirmResetBoard()" class="bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-700 border border-rose-200 px-4 py-2 rounded-xl text-sm font-semibold transition flex items-center gap-2">
+                <i class="fa-solid fa-trash-can"></i>
+                <span>ล้างกระดาน (Reset)</span>
+            </button>
+        </div>
+
+        <!-- 10x10 Number Board Grid -->
+        <div class="bg-white p-2 sm:p-5 rounded-2xl border border-slate-200 shadow-sm overflow-x-auto">
+            <div class="min-w-[640px]">
+                <!-- Grid: 10 columns -->
+                <div id="numberGrid" class="grid grid-cols-10 gap-1.5 sm:gap-2.5">
+                    <!-- Numbers 00-99 will be generated dynamically here -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal: Select Number & Assign Name -->
+    <div id="selectModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl max-w-md w-full overflow-hidden transform transition-all">
+            <div class="bg-indigo-600 text-white px-6 py-4 flex justify-between items-center">
+                <h3 class="text-lg font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-hashtag"></i>
+                    <span>เลือกตัวเลข: <span id="modalNumDisplay" class="text-amber-300 font-mono text-xl">--</span></span>
+                </h3>
+                <button onclick="closeSelectModal()" class="text-indigo-200 hover:text-white transition text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-slate-700 mb-1.5">ชื่อผู้เลือก/จองตัวเลขนี้</label>
+                    <input type="text" id="playerNameInput" placeholder="กรอกชื่อ-นามสกุล หรือชื่อเล่น" 
+                        class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800">
+                </div>
+                <div class="flex gap-2">
+                    <button id="clearSelectionBtn" onclick="clearSelectedNumber()" class="hidden w-1/3 bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 border border-slate-200 py-2.5 rounded-xl font-medium transition text-sm">
+                        ยกเลิกการจอง
+                    </button>
+                    <button onclick="saveNumberSelection()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-xl font-semibold shadow transition text-sm">
+                        บันทึกข้อมูล
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Google Apps Script Web App Config -->
+    <div id="configModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl max-w-lg w-full overflow-hidden">
+            <div class="bg-slate-800 text-white px-6 py-4 flex justify-between items-center">
+                <h3 class="text-lg font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-gear text-emerald-400"></i>
+                    <span>ตั้งค่า Google Sheet Web App URL</span>
+                </h3>
+                <button onclick="closeConfigModal()" class="text-slate-400 hover:text-white transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <p class="text-sm text-slate-600 mb-4">
+                    กรอก Web App URL ที่ได้จากการ Deploy Google Apps Script ใน Google Sheet เพื่อเปิดใช้งานการเชื่อมต่อและ Sync ข้อมูลแบบ Real-time
+                </p>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Google Apps Script Web App URL</label>
+                    <input type="url" id="webAppUrlInput" placeholder="https://script.google.com/macros/s/.../exec" 
+                        class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs font-mono">
+                </div>
+                <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800 mb-5">
+                    <i class="fa-solid fa-lightbulb text-amber-500 mr-1"></i>
+                    หากยังไม่ได้ตั้งค่า ระบบจะบันทึกข้อมูลไว้ใน <strong>LocalStorage</strong> ของเบราว์เซอร์ชั่วคราว สามารถใช้งานและทดสอบระบบได้ทันที
+                </div>
+                <div class="flex justify-end gap-2">
+                    <button onclick="closeConfigModal()" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-600 hover:bg-slate-50 text-sm font-medium">ยกเลิก</button>
+                    <button onclick="saveConfig()" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold shadow">บันทึกการตั้งค่า</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: GAS Script & Setup Instructions -->
+    <div id="gasGuideModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl max-w-2xl w-full overflow-hidden max-h-[90vh] flex flex-col">
+            <div class="bg-indigo-900 text-white px-6 py-4 flex justify-between items-center">
+                <h3 class="text-lg font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-code text-amber-400"></i>
+                    <span>ขั้นตอนการเชื่อมต่อ Google Sheets (Apps Script)</span>
+                </h3>
+                <button onclick="closeGasGuideModal()" class="text-indigo-200 hover:text-white transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto space-y-4 text-sm text-slate-700">
+                <ol class="list-decimal list-inside space-y-2 font-medium text-indigo-950">
+                    <li>เปิด Google Sheets ใหม่ขึ้นมา</li>
+                    <li>ไปที่เมนู <strong>ส่วนขยาย (Extensions)</strong> &gt; <strong>Apps Script</strong></li>
+                    <li>ลบโค้ดเดิมทั้งหมดในไฟล์ <code class="bg-slate-100 text-pink-600 px-1 py-0.5 rounded">Code.gs</code> แล้ววางโค้ดด้านล่างนี้ลงไป:</li>
+                </ol>
+
+                <div class="relative">
+                    <button onclick="copyGasCode()" class="absolute top-2 right-2 bg-slate-700 hover:bg-slate-600 text-white text-xs px-2.5 py-1 rounded-lg transition">
+                        <i class="fa-regular fa-copy mr-1"></i> คัดลอกโค้ด
+                    </button>
+                    <pre class="bg-slate-900 text-emerald-400 p-4 rounded-xl text-xs font-mono overflow-x-auto max-h-60 leading-relaxed" id="gasCodeText">
+function doGet() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  const data = sheet.getDataRange().getValues();
+  let result = { board: {}, prize1: "", prize2: "" };
+  
+  if (data.length > 1) {
+    result.prize1 = String(data[0][1] || "");
+    result.prize2 = String(data[0][3] || "");
+    
+    for (let i = 1; i < data.length; i++) {
+      let num = String(data[i][0]).padStart(2, '0');
+      let name = data[i][1];
+      if (num && name) {
+        result.board[num] = name;
+      }
+    }
+  }
+  
+  return ContentService.createTextOutput(JSON.stringify(result))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function doPost(e) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  const payload = JSON.parse(e.postData.contents);
+  
+  if (payload.action === 'save') {
+    sheet.clear();
+    sheet.appendRow(["Prize1", payload.prize1 || "", "Prize2", payload.prize2 || ""]);
+    sheet.appendRow(["Number", "Name"]);
+    
+    for (let num in payload.board) {
+      sheet.appendRow([num, payload.board[num]]);
+    }
+  } else if (payload.action === 'reset') {
+    sheet.clear();
+    sheet.appendRow(["Prize1", "", "Prize2", ""]);
+    sheet.appendRow(["Number", "Name"]);
+  }
+  
+  return ContentService.createTextOutput(JSON.stringify({ status: "success" }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+</pre>
+                </div>
+
+                <ol start="4" class="list-decimal list-inside space-y-2 font-medium text-indigo-950">
+                    <li>กดปุ่ม <strong>การทำให้ใช้งานได้ (Deploy)</strong> &gt; <strong>การทำให้ใช้งานได้รายการใหม่ (New deployment)</strong></li>
+                    <li>เลือกประเภทเป็น <strong>เว็บแอป (Web app)</strong></li>
+                    <li>ตั้งค่า <strong>ผู้ที่มีสิทธิ์เข้าถึง (Who has access)</strong> ให้เป็น <strong>ทุกคน (Anyone)</strong> *(สำคัญมาก)*</li>
+                    <li>กด Deploy แล้วคัดลอก **URL เว็บแอป** มาวางในช่องตั้งค่าในเว็บนี้</li>
+                </ol>
+            </div>
+            <div class="bg-slate-50 px-6 py-3 border-t border-slate-200 flex justify-end">
+                <button onclick="closeGasGuideModal()" class="px-5 py-2 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 transition">
+                    เข้าใจแล้ว
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // App State Variables
+        let boardData = {}; // { "00": "คุณสมชาย", "05": "คุณสมหญิง" }
+        let prize1 = "";
+        let prize2 = "";
+        let webAppUrl = "";
+        let activeNumSelected = null;
+
+        // Initialize Application
+        window.onload = function() {
+            // Load saved config & data from LocalStorage
+            webAppUrl = localStorage.getItem('num_board_webapp_url') || "";
+            updateStatusBadge();
+
+            const savedBoard = localStorage.getItem('num_board_data');
+            if (savedBoard) {
+                try { boardData = JSON.parse(savedBoard); } catch(e) { boardData = {}; }
+            }
+            
+            prize1 = localStorage.getItem('num_board_prize1') || "";
+            prize2 = localStorage.getItem('num_board_prize2') || "";
+
+            document.getElementById('prize1Input').value = prize1;
+            document.getElementById('prize2Input').value = prize2;
+
+            renderGrid();
+            updatePrizesUI();
+
+            // If Google Web App URL exists, sync from Cloud Sheet
+            if (webAppUrl) {
+                syncDataFromSheet();
+            }
+        };
+
+        // Render 10x10 Grid (00 - 99)
+        function renderGrid() {
+            const gridContainer = document.getElementById('numberGrid');
+            gridContainer.innerHTML = '';
+
+            let countSelected = 0;
+
+            for (let i = 0; i < 100; i++) {
+                const numStr = String(i).padStart(2, '0');
+                const ownerName = boardData[numStr] || null;
+
+                const isPrize1 = (numStr === prize1 && prize1 !== "");
+                const isPrize2 = (numStr === prize2 && prize2 !== "");
+
+                if (ownerName) countSelected++;
+
+                // Build Card Element
+                const card = document.createElement('div');
+                
+                // Color logic
+                let cardBgClass = "bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200";
+                if (isPrize1) {
+                    cardBgClass = "bg-amber-400 hover:bg-amber-500 text-amber-950 font-bold border-amber-500 shadow-md ring-2 ring-amber-400 ring-offset-1 animate-pulse";
+                } else if (isPrize2) {
+                    cardBgClass = "bg-purple-400 hover:bg-purple-500 text-purple-950 font-bold border-purple-500 shadow-md ring-2 ring-purple-400 ring-offset-1 animate-pulse";
+                } else if (ownerName) {
+                    cardBgClass = "bg-emerald-100 hover:bg-emerald-200 text-emerald-900 border-emerald-300 font-semibold";
+                }
+
+                card.className = `num-card min-h-[64px] sm:min-h-[72px] p-1.5 rounded-xl border flex flex-col justify-between items-center text-center cursor-pointer select-none ${cardBgClass}`;
+                card.onclick = () => openSelectModal(numStr);
+
+                card.innerHTML = `
+                    <span class="text-xs sm:text-sm font-mono font-extrabold ${ownerName ? 'text-indigo-950' : 'text-slate-500'}">
+                        ${numStr}
+                    </span>
+                    <div class="w-full text-[10px] sm:text-xs truncate font-medium px-0.5 ${ownerName ? 'text-emerald-900' : 'text-slate-300'}">
+                        ${ownerName ? ownerName : '<span class="opacity-0">-</span>'}
+                    </div>
+                `;
+
+                gridContainer.appendChild(card);
+            }
+
+            // Update stats counter
+            document.getElementById('selectedCount').innerText = countSelected;
+            document.getElementById('remainingCount').innerText = 100 - countSelected;
+        }
+
+        // Modal Controls for Number Selection
+        function openSelectModal(numStr) {
+            activeNumSelected = numStr;
+            document.getElementById('modalNumDisplay').innerText = numStr;
+            
+            const existingName = boardData[numStr] || "";
+            document.getElementById('playerNameInput').value = existingName;
+
+            const clearBtn = document.getElementById('clearSelectionBtn');
+            if (existingName) {
+                clearBtn.classList.remove('hidden');
+            } else {
+                clearBtn.classList.add('hidden');
+            }
+
+            document.getElementById('selectModal').classList.remove('hidden');
+            setTimeout(() => document.getElementById('playerNameInput').focus(), 100);
+        }
+
+        function closeSelectModal() {
+            document.getElementById('selectModal').classList.add('hidden');
+            activeNumSelected = null;
+        }
+
+        // Save Selection
+        function saveNumberSelection() {
+            if (!activeNumSelected) return;
+            const name = document.getElementById('playerNameInput').value.trim();
+
+            if (name) {
+                boardData[activeNumSelected] = name;
+            } else {
+                delete boardData[activeNumSelected];
+            }
+
+            saveStateLocally();
+            renderGrid();
+            updatePrizesUI();
+            closeSelectModal();
+
+            // Sync with Google Sheets
+            syncDataToSheet();
+        }
+
+        // Clear Single Number Selection
+        function clearSelectedNumber() {
+            if (!activeNumSelected) return;
+            delete boardData[activeNumSelected];
+
+            saveStateLocally();
+            renderGrid();
+            updatePrizesUI();
+            closeSelectModal();
+
+            syncDataToSheet();
+        }
+
+        // Set Prize Number (1 or 2)
+        function setPrize(prizeNum) {
+            let val = "";
+            if (prizeNum === 1) {
+                val = document.getElementById('prize1Input').value.trim();
+                if (val !== "" && (isNaN(val) || val.length > 2)) {
+                    alert("กรุณากรอกตัวเลข 00 - 99 เท่านั้น");
+                    return;
+                }
+                prize1 = val !== "" ? val.padStart(2, '0') : "";
+                document.getElementById('prize1Input').value = prize1;
+            } else {
+                val = document.getElementById('prize2Input').value.trim();
+                if (val !== "" && (isNaN(val) || val.length > 2)) {
+                    alert("กรุณากรอกตัวเลข 00 - 99 เท่านั้น");
+                    return;
+                }
+                prize2 = val !== "" ? val.padStart(2, '0') : "";
+                document.getElementById('prize2Input').value = prize2;
+            }
+
+            saveStateLocally();
+            renderGrid();
+            updatePrizesUI();
+            syncDataToSheet();
+        }
+
+        // Update Prize Winner Cards
+        function updatePrizesUI() {
+            // Prize 1 Result
+            const p1Box = document.getElementById('prize1WinnerBox');
+            if (prize1 !== "") {
+                const winner1 = boardData[prize1];
+                if (winner1) {
+                    p1Box.innerHTML = `
+                        <div class="bg-amber-100 border border-amber-300 rounded-lg p-2.5 text-amber-900 flex items-center justify-between">
+                            <div>
+                                <span class="text-xs text-amber-700 block font-medium">เลขรางวัล: <strong class="font-mono text-sm">${prize1}</strong></span>
+                                <span class="text-sm font-bold">🎉 คุณ ${winner1}</span>
+                            </div>
+                            <span class="text-xs font-bold bg-amber-500 text-white px-2 py-1 rounded shadow">ได้รับ 1,000 บาท!</span>
+                        </div>
+                    `;
+                    triggerConfetti();
+                } else {
+                    p1Box.innerHTML = `
+                        <div class="text-xs text-amber-800">
+                            เลขรางวัลคือ <strong class="font-mono text-sm">${prize1}</strong> : <span class="text-rose-600 font-medium">ไม่มีผู้เลือกเลขนี้</span>
+                        </div>
+                    `;
+                }
+            } else {
+                p1Box.innerHTML = `<span class="text-xs text-slate-400">ยังไม่มีการระบุเลขรางวัล</span>`;
+            }
+
+            // Prize 2 Result
+            const p2Box = document.getElementById('prize2WinnerBox');
+            if (prize2 !== "") {
+                const winner2 = boardData[prize2];
+                if (winner2) {
+                    p2Box.innerHTML = `
+                        <div class="bg-purple-100 border border-purple-300 rounded-lg p-2.5 text-purple-900 flex items-center justify-between">
+                            <div>
+                                <span class="text-xs text-purple-700 block font-medium">เลขรางวัล: <strong class="font-mono text-sm">${prize2}</strong></span>
+                                <span class="text-sm font-bold">🎉 คุณ ${winner2}</span>
+                            </div>
+                            <span class="text-xs font-bold bg-purple-600 text-white px-2 py-1 rounded shadow">ได้รับ 1,000 บาท!</span>
+                        </div>
+                    `;
+                    triggerConfetti();
+                } else {
+                    p2Box.innerHTML = `
+                        <div class="text-xs text-purple-800">
+                            เลขรางวัลคือ <strong class="font-mono text-sm">${prize2}</strong> : <span class="text-rose-600 font-medium">ไม่มีผู้เลือกเลขนี้</span>
+                        </div>
+                    `;
+                }
+            } else {
+                p2Box.innerHTML = `<span class="text-xs text-slate-400">ยังไม่มีการระบุเลขรางวัล</span>`;
+            }
+        }
+
+        // Reset Board Confirmation
+        function confirmResetBoard() {
+            if (confirm("คุณแน่ใจหรือไม่ว่าต้องการ 'ล้างกระดาน' ?\n\nการกระทำนี้จะลบข้อมูลผู้เลือกตัวเลขทั้งหมด และล้างเลขรางวัลทั้งหมดออกทันที!")) {
+                boardData = {};
+                prize1 = "";
+                prize2 = "";
+
+                document.getElementById('prize1Input').value = "";
+                document.getElementById('prize2Input').value = "";
+
+                saveStateLocally();
+                renderGrid();
+                updatePrizesUI();
+
+                // Reset on Cloud Sheet
+                if (webAppUrl) {
+                    fetch(webAppUrl, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'reset' })
+                    }).catch(err => console.error("Sync Reset Error:", err));
+                }
+            }
+        }
+
+        // Trigger Celebration Confetti Effect
+        function triggerConfetti() {
+            if (typeof confetti === 'function') {
+                confetti({
+                    particleCount: 80,
+                    spread: 70,
+                    origin: { y: 0.6 }
+                });
+            }
+        }
+
+        // Local Storage Helper
+        function saveStateLocally() {
+            localStorage.setItem('num_board_data', JSON.stringify(boardData));
+            localStorage.setItem('num_board_prize1', prize1);
+            localStorage.setItem('num_board_prize2', prize2);
+        }
+
+        // Config Modals & Logic
+        function openConfigModal() {
+            document.getElementById('webAppUrlInput').value = webAppUrl;
+            document.getElementById('configModal').classList.remove('hidden');
+        }
+
+        function closeConfigModal() {
+            document.getElementById('configModal').classList.add('hidden');
+        }
+
+        function saveConfig() {
+            webAppUrl = document.getElementById('webAppUrlInput').value.trim();
+            localStorage.setItem('num_board_webapp_url', webAppUrl);
+            updateStatusBadge();
+            closeConfigModal();
+
+            if (webAppUrl) {
+                syncDataFromSheet();
+            }
+        }
+
+        function updateStatusBadge() {
+            const badge = document.getElementById('statusBadge');
+            if (webAppUrl) {
+                badge.className = "inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 ml-1 shadow-sm";
+                badge.title = "เชื่อมต่อกับ Google Sheet แล้ว";
+            } else {
+                badge.className = "inline-block w-2.5 h-2.5 rounded-full bg-amber-400 ml-1 shadow-sm";
+                badge.title = "ใช้งานโหมด Local (ยังไม่ได้เชื่อมต่อ Sheet)";
+            }
+        }
+
+        function openGasGuideModal() {
+            document.getElementById('gasGuideModal').classList.remove('hidden');
+        }
+
+        function closeGasGuideModal() {
+            document.getElementById('gasGuideModal').classList.add('hidden');
+        }
+
+        function copyGasCode() {
+            const codeText = document.getElementById('gasCodeText').innerText;
+            const tempInput = document.createElement("textarea");
+            tempInput.value = codeText;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand("copy");
+            document.body.removeChild(tempInput);
+            alert("คัดลอกโค้ด Google Apps Script เรียบร้อยแล้ว!");
+        }
+
+        // Syncing with Google Apps Script
+        function syncDataToSheet() {
+            if (!webAppUrl) return;
+
+            const payload = {
+                action: 'save',
+                board: boardData,
+                prize1: prize1,
+                prize2: prize2
+            };
+
+            fetch(webAppUrl, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            }).then(() => {
+                console.log("Data synced to Google Sheet successfully");
+            }).catch(err => {
+                console.error("Error syncing data:", err);
+            });
+        }
+
+        function syncDataFromSheet() {
+            if (!webAppUrl) return;
+
+            const syncIcon = document.getElementById('syncIcon');
+            if (syncIcon) syncIcon.classList.add('fa-spin');
+
+            fetch(webAppUrl)
+                .then(res => res.json())
+                .then(data => {
+                    if (data) {
+                        boardData = data.board || {};
+                        prize1 = data.prize1 || "";
+                        prize2 = data.prize2 || "";
+
+                        document.getElementById('prize1Input').value = prize1;
+                        document.getElementById('prize2Input').value = prize2;
+
+                        saveStateLocally();
+                        renderGrid();
+                        updatePrizesUI();
+                    }
+                })
+                .catch(err => {
+                    console.error("Failed to fetch from Sheet:", err);
+                })
+                .finally(() => {
+                    if (syncIcon) syncIcon.classList.remove('fa-spin');
+                });
+        }
+    </script>
+</body>
+</html>
