@@ -307,13 +307,15 @@ function doPost(e) {
         let boardData = {}; // { "00": "คุณสมชาย", "05": "คุณสมหญิง" }
         let prize1 = "";
         let prize2 = "";
+        // Default Google Apps Script URL as requested
+        const DEFAULT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxkX1aigq3qTeRErIoi46-eB4-ZPZzRgsRZ2BEStXZsIQZTDlv1yEvsc3OCPXeYtI8s2w/exec";
         let webAppUrl = "";
         let activeNumSelected = null;
 
         // Initialize Application
         window.onload = function() {
-            // Load saved config & data from LocalStorage
-            webAppUrl = localStorage.getItem('num_board_webapp_url') || "";
+            // Load saved config or fallback to Default Apps Script URL
+            webAppUrl = localStorage.getItem('num_board_webapp_url') || DEFAULT_WEB_APP_URL;
             updateStatusBadge();
 
             const savedBoard = localStorage.getItem('num_board_data');
@@ -330,7 +332,7 @@ function doPost(e) {
             renderGrid();
             updatePrizesUI();
 
-            // If Google Web App URL exists, sync from Cloud Sheet
+            // Auto Sync data from Google Sheet on page load
             if (webAppUrl) {
                 syncDataFromSheet();
             }
@@ -579,7 +581,8 @@ function doPost(e) {
         }
 
         function saveConfig() {
-            webAppUrl = document.getElementById('webAppUrlInput').value.trim();
+            const inputUrl = document.getElementById('webAppUrlInput').value.trim();
+            webAppUrl = inputUrl || DEFAULT_WEB_APP_URL;
             localStorage.setItem('num_board_webapp_url', webAppUrl);
             updateStatusBadge();
             closeConfigModal();
